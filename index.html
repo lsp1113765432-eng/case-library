@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>信用中国案例库</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f7;color:#1d1d1f;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e5e5e5;padding:24px 20px 16px;position:sticky;top:0;z-index:100}
+.header h1{font-size:20px;font-weight:600;margin-bottom:4px}
+.header p{font-size:13px;color:#86868b}
+.search-wrap{max-width:720px;margin:0 auto}
+.search-box{display:flex;gap:8px;margin-top:12px}
+.search-box input{flex:1;height:44px;border:2px solid #e5e5e5;border-radius:12px;padding:0 16px;font-size:15px;outline:none;transition:.2s}
+.search-box input:focus{border-color:#0071e3}
+.search-box button{height:44px;padding:0 20px;background:#0071e3;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:500;cursor:pointer;transition:.2s}
+.search-box button:hover{background:#0077ed}
+.tags{max-width:720px;margin:12px auto 0;display:flex;flex-wrap:wrap;gap:6px}
+.tag{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;cursor:pointer;transition:.15s;background:#e8e8ed;color:#1d1d1f;border:none;user-select:none}
+.tag:hover{background:#d1d1d6}
+.main{max-width:720px;margin:16px auto;padding:0 16px 80px}
+.card{background:#fff;border-radius:16px;padding:20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:.2s;cursor:pointer;display:none}
+.card.visible{display:block}
+.card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.card .title{font-size:16px;font-weight:600;margin-bottom:2px}
+.card .sub{font-size:13px;color:#86868b;margin-bottom:6px}
+.card .desc{font-size:13px;color:#515154;line-height:1.5;margin-top:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.detail-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:200;display:none}
+.detail-panel{position:fixed;top:0;right:-100%;width:100%;max-width:720px;height:100%;background:#fff;z-index:201;overflow-y:auto;transition:right .3s;box-shadow:-4px 0 20px rgba(0,0,0,.1)}
+.detail-panel.open{right:0}
+.detail-close{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#fff;border-bottom:1px solid #eee;z-index:10}
+.detail-close button{background:none;border:none;font-size:20px;cursor:pointer;color:#86868b;padding:4px}
+.detail-close button:hover{color:#1d1d1f}
+.detail-body{padding:20px}
+.detail-body h2{font-size:22px;margin-bottom:2px}
+.detail-body .meta{font-size:13px;color:#86868b;margin-bottom:12px}
+.detail-body .story{font-size:15px;line-height:1.8;color:#1d1d1f;white-space:pre-wrap}
+.detail-body .story[contenteditable="true"]{background:#fafafa;border:1px dashed #0071e3;border-radius:8px;padding:12px;outline:none}
+.detail-body .story[contenteditable="true"]:focus{border-color:#0071e3;background:#fff}
+.save-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #eee;padding:12px 20px;display:flex;gap:8px;justify-content:flex-end}
+.save-bar button{padding:8px 20px;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;border:none;transition:.2s}
+.save-bar .btn-save{background:#0071e3;color:#fff}
+.save-bar .btn-save:hover{background:#0077ed}
+.save-bar .btn-cancel{background:#f0f0f5;color:#1d1d1f}
+.save-bar .btn-cancel:hover{background:#e5e5e5}
+.save-bar .saved{color:#34c759;font-size:13px;display:none;align-items:center}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:40px 20px;color:#86868b;font-size:14px;display:none}
+@media(max-width:480px){.header{padding:16px 12px}.main{padding:12px}.detail-panel{max-width:100%}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="search-wrap">
+    <h1>信用中国案例库</h1>
+    <p>共27家企业 · 点击查看完整案例故事 · 内容可在线编辑保存</p>
+    <div class="search-box">
+      <input id="searchInput" placeholder="输入行业、人名、关键词搜索…" autofocus>
+      <button onclick="doSearch()">搜索</button>
+    </div>
+    <div class="tags" id="tagContainer"></div>
+  </div>
+</div>
+<div class="main" id="cardContainer">
+  <div class="empty" id="emptyMsg" style="display:none">没有匹配的案例，换个关键词试试</div>
+</div>
+<div class="detail-overlay" id="detailOverlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-close">
+    <span id="detailIndustry" style="font-size:12px;color:#86868b"></span>
+    <button onclick="closeDetail()">&#x2715;</button>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+  <div class="save-bar">
+    <span class="saved" id="savedIndicator">&#x2713; 已保存</span>
+    <button class="btn-cancel" onclick="cancelEdit()">取消</button>
+    <button class="btn-save" onclick="saveEdit()">保存修改</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="stories_data.js"></script>
+<script>
+const CASES = [
+  {person:"王照",company:"铭汉科技",industry:"能源数字化",keywords:["能源","节能","能耗","合同能源管理","碳中和","碳减排","智慧能源","数字化","双碳","碳关税","生物质"]},
+  {person:"陈健",company:"捷先数码",industry:"智能水务",keywords:["水务","水表","智能计量","供水","物联网","传感器","直读水表","水务平台","NB-IoT","专精特新"]},
+  {person:"陈巧荣",company:"荣之创",industry:"医疗健康",keywords:["心脏","心脏病","心电","心率","慢病管理","健康管理","远程医疗","七师共管","居家康养"]},
+  {person:"戴良玉",company:"科飞新材",industry:"军工新材料",keywords:["安全气囊","产气材料","军工","汽车安全","气体发生器","新材料","军转民","兵器工业","新三板"]},
+  {person:"励行根",company:"天生密封件",industry:"核工业",keywords:["核工业","核电","密封件","密封圈","C型密封","反应堆","核电站","国产替代","卡脖子","国家单项冠军"]},
+  {person:"张开山",company:"华得森",industry:"医疗诊断",keywords:["CTC","液体活检","肿瘤早筛","癌症检测","体外诊断","早筛","癌症筛查","医疗器械","三类证","诊断"]},
+  {person:"冉将军",company:"三瓴实业",industry:"大急救",keywords:["急救","应急","救护车","救援","AED","医疗救援","应急救援","急救设备"]},
+  {person:"徐建青",company:"鑫湾生物",industry:"创新药",keywords:["创新药","CAR-T","免疫治疗","细胞治疗","肿瘤","实体瘤","免疫","生物医药","抗癌","临床","复旦","教授创业"]},
+  {person:"赵涌",company:"北正赛欧",industry:"干细胞治疗",keywords:["干细胞","肾病","细胞存储","细胞治疗","肾脏","再生医学","慢性肾病","脐带血"]},
+  {person:"刘越浪",company:"正道能源",industry:"石油装备",keywords:["石油装备","钻井","石油勘探","能源装备","石油机械","深地","矿产","固控"]},
+  {person:"郑海金",company:"瑞达石油",industry:"油田节能",keywords:["石油","油田","机采","采油","节能","抽油机","能效","油田节能"]},
+  {person:"童友之",company:"开拓药业",industry:"港股创新药",keywords:["化妆品","功效护肤","脱发","痤疮","美白","创新药","港股","09939","科欣","上市公司"]},
+  {person:"李树广",company:"国科瀚海",industry:"激光气体检测",keywords:["激光","气体检测","工业安全","泄漏监测","TDLAS","安全监测","危化","气体泄漏","中科院"]},
+  {person:"李贵现",company:"数慧时空",industry:"数据治理",keywords:["数据治理","地理信息","GIS","遥感","数字政务","自然资源","国土","测绘","空间数据","长城大模型","数字孪生","大数据"]},
+  {person:"蒋俊",company:"山旭光电",industry:"光纤测温",keywords:["光纤","光纤传感","光纤测温","城市管网","管廊","电缆沟","温度监测","DTS","分布式光纤","工业安全","传感"]},
+  {person:"苏艳",company:"苏可安药业",industry:"中医药",keywords:["中医药","制药","中药","中成药","GMP","气雾剂","中药现代化","药品","医药制造"]},
+  {person:"孙卫国",company:"迈拓仪表",industry:"超声计量",keywords:["超声水表","智能水表","水务数字化","超声波","流量计","智慧水务","水计量","301006","A股","创业板","上市公司"]},
+  {person:"何立荣",company:"必可测",industry:"智慧电力",keywords:["智慧电厂","电力","火电","AI管控","设备诊断","发电","电厂智能化","状态检修","汽轮机","新型电力系统","智能运维"]},
+  {person:"冯冠平",company:"烯旺科技",industry:"石墨烯新材料",keywords:["新材料","石墨烯","发热膜","远红外","碳材料","石墨烯产业","纳米材料","清华","教授创业","北京冬奥"]},
+  {person:"金善朝",company:"江苏安防",industry:"智慧交通",keywords:["智慧交通","地铁","高速公路","低空经济","轨道交通","交通数字化","AI智能体","智能交通"]},
+  {person:"张发宇",company:"长风自动化",industry:"光伏新能源",keywords:["光伏","新能源","储能","太阳能","光伏发电","逆变器","储能系统","新能源发电","分布式光伏"]},
+  {person:"刘刚",company:"地大坤迪",industry:"地质信息化",keywords:["地质","三维地学","玻璃国土","矿产勘探","地质信息化","三维地质","地质建模","数字地质","教授创业"]},
+  {person:"詹正云",company:"赞南科技",industry:"特种新材料",keywords:["催化剂","HNBR","特种材料","橡胶","氢化丁腈","国产替代","PDCPD","轻量化","新材料"]},
+  {person:"张绪穆",company:"格林凯特",industry:"手性催化",keywords:["手性催化","医药合成","不对称氢化","手性药物","催化","药物中间体","原料药","绿色制药","凯瑞斯德","教授创业"]},
+  {person:"宋永华",company:"博流智能",industry:"AI芯片",keywords:["芯片","AIoT","物联网","半导体","RISC-V","集成电路","智能硬件","无线连接","边缘计算","Marvell","WiFi","蓝牙","AI芯片","人工智能"]},
+  {person:"李重远",company:"环球医疗",industry:"健康保险",keywords:["健康保险","医疗支付","商保","理赔","健康险","医疗救援","医疗保险","TPA","数学博士"]},
+  {person:"杨丽春",company:"北方实验室",industry:"网络安全",keywords:["网络安全","等级保护","密码安全","渗透测试","等保","商密","信息安全","安全检测","安全评估","密码测评","北交所"]}
+];
+
+const ALL = CASES.map(c => ({...c, story: STORIES[c.person] || ''}));
+
+// Tag cloud
+const TAG = document.getElementById('tagContainer');
+const INDUSTRIES = [...new Set(ALL.map(c => c.industry))];
+INDUSTRIES.forEach(ind => {
+  const b = document.createElement('button');
+  b.className = 'tag';
+  b.textContent = ind;
+  b.onclick = () => { document.getElementById('searchInput').value = ind; doSearch(); };
+  TAG.appendChild(b);
+});
+
+const CONTAINER = document.getElementById('cardContainer');
+const EMPTY = document.getElementById('emptyMsg');
+let currentId = null, origStory = '', editing = false;
+
+function render(cases) {
+  CONTAINER.innerHTML = '';
+  if (!cases.length) { EMPTY.style.display = 'block'; return; }
+  EMPTY.style.display = 'none';
+  cases.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'card visible';
+    const d = c.story ? c.story.substring(0, 150) + (c.story.length > 150 ? '...' : '') : '';
+    card.innerHTML = '<div class="title">' + c.person + ' \u2014 ' + c.company + '</div><div class="sub">' + c.industry + '</div><div class="desc">' + d + '</div><div><button class="tag" onclick="event.stopPropagation();openDetail(\'' + c.person + '\')">查看完整案例 \u2192</button></div>';
+    card.onclick = () => openDetail(c.person);
+    CONTAINER.appendChild(card);
+  });
+}
+
+function doSearch() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  if (!q) { render(ALL); return; }
+  render(ALL.filter(c => (c.person + c.company + c.industry + c.keywords.join(' ') + (c.story||'')).toLowerCase().includes(q)));
+}
+
+function openDetail(p) {
+  const c = ALL.find(x => x.person === p);
+  if (!c) return;
+  currentId = p; editing = false;
+  document.getElementById('detailIndustry').textContent = c.industry;
+  document.getElementById('detailBody').innerHTML = '<h2>' + c.person + ' \u2014 ' + c.company + '</h2><div class="meta">' + c.industry + '</div><div class="story" id="sc" contenteditable="false">' + c.story + '</div>';
+  document.getElementById('savedIndicator').style.display = 'none';
+  document.getElementById('detailOverlay').style.display = 'block';
+  document.getElementById('detailPanel').classList.add('open');
+  origStory = c.story;
+}
+
+function closeDetail() {
+  if (editing) { cancelEdit(); return; }
+  document.getElementById('detailOverlay').style.display = 'none';
+  document.getElementById('detailPanel').classList.remove('open');
+  currentId = null;
+}
+
+document.addEventListener('click', function(e) {
+  const s = document.getElementById('sc');
+  if (s && s.contains(e.target) && !editing) { editing = true; s.contentEditable = 'true'; s.focus(); }
+});
+
+function cancelEdit() {
+  editing = false;
+  const s = document.getElementById('sc');
+  s.contentEditable = 'false';
+  s.textContent = origStory;
+  document.getElementById('savedIndicator').style.display = 'none';
+}
+
+function saveEdit() {
+  const s = document.getElementById('sc');
+  const ns = s.textContent.trim();
+  if (!ns) return;
+  const c = ALL.find(x => x.person === currentId);
+  if (c) { c.story = ns; origStory = ns; try { const e = JSON.parse(localStorage.getItem('edits')||'{}'); e[currentId]=ns; localStorage.setItem('edits',JSON.stringify(e)); } catch(e) {} }
+  editing = false; s.contentEditable = 'false';
+  document.getElementById('savedIndicator').style.display = 'flex';
+  const t = document.getElementById('toast'); t.textContent='已保存'; t.classList.add('show'); setTimeout(function(){t.classList.remove('show')},2000);
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  render(q ? ALL.filter(x => (x.person+x.company+x.industry+x.keywords.join(' ')+(x.story||'')).toLowerCase().includes(q)) : ALL);
+}
+
+// Load saved edits
+try {
+  const e = JSON.parse(localStorage.getItem('edits')||'{}');
+  for (const [k,v] of Object.entries(e)) { const c = ALL.find(x => x.person===k); if (c) c.story = v; }
+} catch(e) {}
+
+render(ALL);
+document.getElementById('searchInput').addEventListener('input', doSearch);
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDetail(); });
+</script>
+</body>
+</html>
