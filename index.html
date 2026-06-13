@@ -4,10 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>信用中国案例库</title>
-<link rel="stylesheet" href="styles.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f7;color:#1d1d1f;min-height:100vh}
+.pw-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.pw-overlay.hidden{display:none}
+.pw-overlay h1{font-size:24px;font-weight:600;margin-bottom:8px;color:#1d1d1f}
+.pw-overlay p{font-size:14px;color:#86868b;margin-bottom:20px}
+.pw-overlay input{width:280px;height:44px;border:2px solid #e5e5e5;border-radius:12px;padding:0 16px;font-size:15px;outline:none;text-align:center;transition:.2s}
+.pw-overlay input:focus{border-color:#0071e3}
+.pw-overlay .err{color:#ff3b30;font-size:13px;margin-top:8px;display:none}
+.pw-overlay button{height:44px;padding:0 24px;background:#0071e3;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:500;cursor:pointer;margin-top:12px;transition:.2s}
+.pw-overlay button:hover{background:#0077ed}
 .header{background:#fff;border-bottom:1px solid #e5e5e5;padding:24px 20px 16px;position:sticky;top:0;z-index:100}
 .header h1{font-size:20px;font-weight:600;margin-bottom:4px}
 .header p{font-size:13px;color:#86868b}
@@ -53,12 +61,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 </style>
 </head>
 <body>
+<div class="pw-overlay" id="pwOverlay">
+  <h1>信用中国案例库</h1>
+  <p>请输入密码访问</p>
+  <input type="password" id="pwInput" placeholder="请输入密码" autofocus onkeydown="if(event.key==='Enter')checkPw()">
+  <div class="err" id="pwErr">密码错误，请重试</div>
+  <button onclick="checkPw()">进入</button>
+</div>
+<script>
+function checkPw(){
+  var p=document.getElementById('pwInput').value;
+  if(p==='haoduohuizhi'){
+    localStorage.setItem('case_pw','1');
+    document.getElementById('pwOverlay').classList.add('hidden');
+  } else {
+    document.getElementById('pwErr').style.display='block';
+  }
+}
+if(localStorage.getItem('case_pw')==='1'){
+  document.getElementById('pwOverlay').classList.add('hidden');
+}
+</script>
 <div class="header">
   <div class="search-wrap">
     <h1>信用中国案例库</h1>
     <p>共27家企业 · 点击查看完整案例故事 · 内容可在线编辑保存</p>
     <div class="search-box">
-      <input id="searchInput" placeholder="输入行业、人名、关键词搜索…" autofocus>
+      <input id="searchInput" placeholder="输入行业、人名、关键词…" autofocus>
       <button onclick="doSearch()">搜索</button>
     </div>
     <div class="tags" id="tagContainer"></div>
@@ -112,98 +141,57 @@ const CASES = [
   {person:"李重远",company:"环球医疗",industry:"健康保险",keywords:["健康保险","医疗支付","商保","理赔","健康险","医疗救援","医疗保险","TPA","数学博士"]},
   {person:"杨丽春",company:"北方实验室",industry:"网络安全",keywords:["网络安全","等级保护","密码安全","渗透测试","等保","商密","信息安全","安全检测","安全评估","密码测评","北交所"]}
 ];
-
 const ALL = CASES.map(c => ({...c, story: STORIES[c.person] || ''}));
-
-// Tag cloud
 const TAG = document.getElementById('tagContainer');
-const INDUSTRIES = [...new Set(ALL.map(c => c.industry))];
-INDUSTRIES.forEach(ind => {
-  const b = document.createElement('button');
-  b.className = 'tag';
-  b.textContent = ind;
-  b.onclick = () => { document.getElementById('searchInput').value = ind; doSearch(); };
+[...new Set(ALL.map(c=>c.industry))].forEach(ind => {
+  const b = document.createElement('button'); b.className='tag'; b.textContent=ind;
+  b.onclick=()=>{document.getElementById('searchInput').value=ind; doSearch();};
   TAG.appendChild(b);
 });
-
-const CONTAINER = document.getElementById('cardContainer');
-const EMPTY = document.getElementById('emptyMsg');
-let currentId = null, origStory = '', editing = false;
-
-function render(cases) {
-  CONTAINER.innerHTML = '';
-  if (!cases.length) { EMPTY.style.display = 'block'; return; }
-  EMPTY.style.display = 'none';
-  cases.forEach(c => {
-    const card = document.createElement('div');
-    card.className = 'card visible';
-    const d = c.story ? c.story.substring(0, 150) + (c.story.length > 150 ? '...' : '') : '';
-    card.innerHTML = '<div class="title">' + c.person + ' \u2014 ' + c.company + '</div><div class="sub">' + c.industry + '</div><div class="desc">' + d + '</div><div><button class="tag" onclick="event.stopPropagation();openDetail(\'' + c.person + '\')">查看完整案例 \u2192</button></div>';
-    card.onclick = () => openDetail(c.person);
-    CONTAINER.appendChild(card);
+const CONTAINER=document.getElementById('cardContainer'), EMPTY=document.getElementById('emptyMsg');
+let currentId=null, origStory='', editing=false;
+function render(cases){
+  CONTAINER.innerHTML='';
+  if(!cases.length){EMPTY.style.display='block';return;}
+  EMPTY.style.display='none';
+  cases.forEach(c=>{
+    const cd=document.createElement('div'); cd.className='card visible';
+    const d=c.story?c.story.substring(0,150)+(c.story.length>150?'...':''):'';
+    cd.innerHTML='<div class="title">'+c.person+' — '+c.company+'</div><div class="sub">'+c.industry+'</div><div class="desc">'+d+'</div><div><button class="tag" onclick="event.stopPropagation();openDetail(\''+c.person+'\')">查看完整案例 →</button></div>';
+    cd.onclick=()=>openDetail(c.person);
+    CONTAINER.appendChild(cd);
   });
 }
-
-function doSearch() {
-  const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  if (!q) { render(ALL); return; }
-  render(ALL.filter(c => (c.person + c.company + c.industry + c.keywords.join(' ') + (c.story||'')).toLowerCase().includes(q)));
+function doSearch(){
+  const q=document.getElementById('searchInput').value.trim().toLowerCase();
+  render(q?ALL.filter(c=>(c.person+c.company+c.industry+c.keywords.join(' ')+(c.story||'')).toLowerCase().includes(q)):ALL);
 }
-
-function openDetail(p) {
-  const c = ALL.find(x => x.person === p);
-  if (!c) return;
-  currentId = p; editing = false;
-  document.getElementById('detailIndustry').textContent = c.industry;
-  document.getElementById('detailBody').innerHTML = '<h2>' + c.person + ' \u2014 ' + c.company + '</h2><div class="meta">' + c.industry + '</div><div class="story" id="sc" contenteditable="false">' + c.story + '</div>';
-  document.getElementById('savedIndicator').style.display = 'none';
-  document.getElementById('detailOverlay').style.display = 'block';
+function openDetail(p){
+  const c=ALL.find(x=>x.person===p); if(!c)return;
+  currentId=p; editing=false;
+  document.getElementById('detailIndustry').textContent=c.industry;
+  document.getElementById('detailBody').innerHTML='<h2>'+c.person+' — '+c.company+'</h2><div class="meta">'+c.industry+'</div><div class="story" id="sc" contenteditable="false">'+c.story+'</div>';
+  document.getElementById('savedIndicator').style.display='none';
+  document.getElementById('detailOverlay').style.display='block';
   document.getElementById('detailPanel').classList.add('open');
-  origStory = c.story;
+  origStory=c.story;
 }
-
-function closeDetail() {
-  if (editing) { cancelEdit(); return; }
-  document.getElementById('detailOverlay').style.display = 'none';
-  document.getElementById('detailPanel').classList.remove('open');
-  currentId = null;
+function closeDetail(){if(editing){cancelEdit();return;}document.getElementById('detailOverlay').style.display='none';document.getElementById('detailPanel').classList.remove('open');currentId=null;}
+document.addEventListener('click',function(e){const s=document.getElementById('sc');if(s&&s.contains(e.target)&&!editing){editing=true;s.contentEditable='true';s.focus();}});
+function cancelEdit(){editing=false;const s=document.getElementById('sc');s.contentEditable='false';s.textContent=origStory;document.getElementById('savedIndicator').style.display='none';}
+function saveEdit(){
+  const s=document.getElementById('sc');const ns=s.textContent.trim();if(!ns)return;
+  const c=ALL.find(x=>x.person===currentId);
+  if(c){c.story=ns;origStory=ns;try{const e=JSON.parse(localStorage.getItem('edits')||'{}');e[currentId]=ns;localStorage.setItem('edits',JSON.stringify(e));}catch(e){}}
+  editing=false;s.contentEditable='false';document.getElementById('savedIndicator').style.display='flex';
+  const t=document.getElementById('toast');t.textContent='已保存';t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2000);
+  const q=document.getElementById('searchInput').value.trim().toLowerCase();
+  render(q?ALL.filter(x=>(x.person+x.company+x.industry+x.keywords.join(' ')+(x.story||'')).toLowerCase().includes(q)):ALL);
 }
-
-document.addEventListener('click', function(e) {
-  const s = document.getElementById('sc');
-  if (s && s.contains(e.target) && !editing) { editing = true; s.contentEditable = 'true'; s.focus(); }
-});
-
-function cancelEdit() {
-  editing = false;
-  const s = document.getElementById('sc');
-  s.contentEditable = 'false';
-  s.textContent = origStory;
-  document.getElementById('savedIndicator').style.display = 'none';
-}
-
-function saveEdit() {
-  const s = document.getElementById('sc');
-  const ns = s.textContent.trim();
-  if (!ns) return;
-  const c = ALL.find(x => x.person === currentId);
-  if (c) { c.story = ns; origStory = ns; try { const e = JSON.parse(localStorage.getItem('edits')||'{}'); e[currentId]=ns; localStorage.setItem('edits',JSON.stringify(e)); } catch(e) {} }
-  editing = false; s.contentEditable = 'false';
-  document.getElementById('savedIndicator').style.display = 'flex';
-  const t = document.getElementById('toast'); t.textContent='已保存'; t.classList.add('show'); setTimeout(function(){t.classList.remove('show')},2000);
-  const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  render(q ? ALL.filter(x => (x.person+x.company+x.industry+x.keywords.join(' ')+(x.story||'')).toLowerCase().includes(q)) : ALL);
-}
-
-// Load saved edits
-try {
-  const e = JSON.parse(localStorage.getItem('edits')||'{}');
-  for (const [k,v] of Object.entries(e)) { const c = ALL.find(x => x.person===k); if (c) c.story = v; }
-} catch(e) {}
-
+try{const e=JSON.parse(localStorage.getItem('edits')||'{}');for(const[k,v]of Object.entries(e)){const c=ALL.find(x=>x.person===k);if(c)c.story=v;}}catch(e){}
 render(ALL);
-document.getElementById('searchInput').addEventListener('input', doSearch);
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeDetail(); });
+document.getElementById('searchInput').addEventListener('input',doSearch);
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDetail();});
 </script>
 </body>
 </html>
